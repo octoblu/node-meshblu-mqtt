@@ -29,7 +29,7 @@ var conn = skynet.createConnection({
   "token": "xxxxxxx-My-Token-xxxxxxxxx",
   "qos": 0, // MQTT Quality of Service (0=no confirmation, 1=confirmation, 2=N/A)
   "host": "localhost", // optional - defaults to http://skynet.im
-  "port": 3000  // optional - defaults to 80
+  "port": 1883  // optional - defaults to 1883
 });
 
 conn.on('ready', function(){
