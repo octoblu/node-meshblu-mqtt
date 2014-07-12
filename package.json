@@ -1,7 +1,7 @@
 {
    "name":"skynet-mqtt",
    "description":"Skynet MQTT client API",
-   "version":"0.5.0",
+   "version":"0.6.0",
    "homepage":"http://skynet.im",
    "repository":"git@github.com:skynetim/mqtt-client.git",
    "author":"Chris Matthieu <chris@matthieu.us> (http://chrismatthieu.com/)",
