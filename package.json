@@ -1,7 +1,7 @@
 {
-  "name": "skynet-mqtt",
+  "name": "meshblu-mqtt",
   "description": "Skynet MQTT client API",
-  "version": "0.7.0",
+  "version": "1.0.0",
   "homepage": "http://skynet.im",
   "repository": "git@github.com:skynetim/mqtt-client.git",
   "author": "Chris Matthieu <chris@matthieu.us> (http://chrismatthieu.com/)",
