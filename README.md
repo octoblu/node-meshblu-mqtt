@@ -1,34 +1,34 @@
 ```
  SSSSS  kk                            tt
 SS      kk  kk yy   yy nn nnn    eee  tt
- SSSSS  kkkkk  yy   yy nnn  nn ee   e tttt  
+ SSSSS  kkkkk  yy   yy nnn  nn ee   e tttt
      SS kk kk   yyyyyy nn   nn eeeee  tt
  SSSSS  kk  kk      yy nn   nn  eeeee  tttt
                 yyyyy
 ```
 
-Skynet-MQTT
+meshblu-mqtt
 ===
 
-An simple MQTT based client for connecting to [skynet.im](http://skynet.im)
+An simple MQTT based client for connecting to [meshblu.octoblu.com](http://meshblu.octoblu.com)
 
 Installation:
 ---
 ```
-npm install skynet-mqtt
+npm install meshblu-mqtt
 ```
 
 Example:
 ---
 
 ```javascript
-var skynet = require('skynet-mqtt');
+var meshblu = require('meshblu-mqtt');
 
-var conn = skynet.createConnection({
+var conn = meshblu.createConnection({
   "uuid": "xxxxxxxxxxxx-My-UUID-xxxxxxxxxxxxxx",
   "token": "xxxxxxx-My-Token-xxxxxxxxx",
   "qos": 0, // MQTT Quality of Service (0=no confirmation, 1=confirmation, 2=N/A)
-  "host": "localhost", // optional - defaults to skynet.im
+  "host": "localhost", // optional - defaults to meshblu.im
   "port": 1883  // optional - defaults to 1883
 });
 
@@ -46,7 +46,7 @@ conn.on('ready', function(){
   conn.message({
     "devices": "xxxxxxx-some-other-uuid-xxxxxxxxx",
     "payload": {
-      "skynet":"online"
+      "meshblu":"online"
     }
   });
 
@@ -55,7 +55,7 @@ conn.on('ready', function(){
   conn.message({
     "devices": "*",
     "payload": {
-      "hello":"skynet"
+      "hello":"meshblu"
     }
   });
 
@@ -64,7 +64,7 @@ conn.on('ready', function(){
   conn.subscribe('xxxxxxx-some-other-uuid-xxxxxxxxx');
 
 
-  // Log sensor data to skynet
+  // Log sensor data to meshblu
   conn.data({temperature: 75, windspeed: 10});
 
 });
