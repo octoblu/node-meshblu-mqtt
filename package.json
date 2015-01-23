@@ -1,9 +1,9 @@
 {
   "name": "meshblu-mqtt",
-  "description": "Skynet MQTT client API",
+  "description": "Meshblu MQTT client API",
   "version": "1.0.0",
-  "homepage": "http://skynet.im",
-  "repository": "git@github.com:skynetim/mqtt-client.git",
+  "homepage": "http://developer.octoblu.com",
+  "repository": "git@github.com:octoblu/mqtt-client.git",
   "author": "Chris Matthieu <chris@matthieu.us> (http://chrismatthieu.com/)",
   "main": "./index.js",
   "keywords": [
@@ -12,7 +12,8 @@
     "arduino",
     "tessel",
     "raspberrypi",
-    "skynet"
+    "skynet",
+    "meshblu"
   ],
   "dependencies": {
     "mqtt": "^1.0.5"
@@ -23,7 +24,7 @@
   "licenses": [
     {
       "type": "MIT",
-      "url": "http://github.com/skynetim/npm/raw/master/LICENSE"
+      "url": "http://github.com/octoblu/npm/raw/master/LICENSE"
     }
   ]
 }
