@@ -1,13 +1,4 @@
-```
- SSSSS  kk                            tt
-SS      kk  kk yy   yy nn nnn    eee  tt
- SSSSS  kkkkk  yy   yy nnn  nn ee   e tttt
-     SS kk kk   yyyyyy nn   nn eeeee  tt
- SSSSS  kk  kk      yy nn   nn  eeeee  tttt
-                yyyyy
-```
-
-meshblu-mqtt
+Meshblu MQTT
 ===
 
 An simple MQTT based client for connecting to [meshblu.octoblu.com](http://meshblu.octoblu.com)
@@ -22,53 +13,48 @@ Example:
 ---
 
 ```javascript
-var meshblu = require('meshblu-mqtt');
+var Meshblu = require('meshblu-mqtt');
+var config  = require('./meshblu.json');
 
-var conn = meshblu.createConnection({
-  "uuid": "xxxxxxxxxxxx-My-UUID-xxxxxxxxxxxxxx",
-  "token": "xxxxxxx-My-Token-xxxxxxxxx",
-  "qos": 0, // MQTT Quality of Service (0=no confirmation, 1=confirmation, 2=N/A)
-  "host": "localhost", // optional - defaults to meshblu.im
-  "port": 1883  // optional - defaults to 1883
+// Config Example
+// {
+//   "uuid": "5632dd4a-e66b-43c7-bbbd-b264903e20bd",
+//   "token": "c84bdb43febc2702110fc7d6a9aa91cc6b783ec1",
+//   "hostname": "meshblu.octoblu.com",
+//   "port": "1883"
+// }
+
+var meshblu = new Meshblu(config);
+console.log('starting...');
+
+meshblu.connect(function(response){
+  console.log('ready', response);
+  // Update Device - response emits event 'config'
+  meshblu.update({uuid: config.uuid, skynet: 'rules'});
+
+  // Send Data - response emits event 'data'
+  meshblu.data({sensorData: 1500});
+
+  // Message - response emits event 'message'
+  var message = {
+    devices: ['5682bd69-0199-46eb-b79b-0f585e5994e5'],
+    topic: 'hello',
+    payload: {ilove: 'food'}
+  };
+  meshblu.message(message);
+
+  // Reset token - response emits event 'token'
+  meshblu.resetToken({uuid: 'some-uuid'});
+
+  // Generate New Session Token - response emits event 'generateAndStoreToken'
+  meshblu.generateAndStoreToken({uuid: 'some-uuid'});
+
+  // Get Public Key - response emits event 'getPublicKey'
+  meshblu.getPublicKey({uuid: 'some-uuid'});
+
+  // Whoami - - response emits event 'whoami'
+  meshblu.whoami();
 });
-
-conn.on('ready', function(){
-
-  console.log('UUID AUTHENTICATED!');
-
-  //Listen for messages
-  conn.on('message', function(message){
-    console.log('message received', message);
-  });
-
-
-  // Send a message to another device
-  conn.message({
-    "devices": "xxxxxxx-some-other-uuid-xxxxxxxxx",
-    "payload": {
-      "meshblu":"online"
-    }
-  });
-
-
-  // Broadcast a message to any subscribers to your uuid
-  conn.message({
-    "devices": "*",
-    "payload": {
-      "hello":"meshblu"
-    }
-  });
-
-
-  // Subscribe to broadcasts from another device
-  conn.subscribe('xxxxxxx-some-other-uuid-xxxxxxxxx');
-
-
-  // Log sensor data to meshblu
-  conn.data({temperature: 75, windspeed: 10});
-
-});
-
 ```
 
 LICENSE

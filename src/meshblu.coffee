@@ -3,7 +3,7 @@ url             = require 'url'
 {EventEmitter2} = require 'eventemitter2'
 debug           = require('debug')('meshblu-mqtt')
 
-PROXY_EVENTS = ['close', 'error', 'reconnect', 'offline', 'pong', 'open', 'config', 'data']
+PROXY_EVENTS = ['close', 'error', 'reconnect', 'offline', 'pong', 'open', 'config', 'data', 'generateAndStoreToken', 'token', 'publicKey']
 
 class Meshblu extends EventEmitter2
   constructor: (options={}, dependencies={})->
@@ -61,6 +61,9 @@ class Meshblu extends EventEmitter2
 
   getPublicKey: (data) =>
     @publish 'getPublicKey', data
+
+  generateAndStoreToken: (data) =>
+    @publish 'generateAndStoreToken', data
 
   whoami: =>
     @publish 'whoami'
