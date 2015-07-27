@@ -1,7 +1,7 @@
 {
   "name": "meshblu-mqtt",
   "description": "Meshblu MQTT client API",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "homepage": "http://developer.octoblu.com",
   "repository": "git@github.com:octoblu/mqtt-client.git",
   "author": "Chris Matthieu <chris@matthieu.us> (http://chrismatthieu.com/)",
@@ -13,10 +13,14 @@
     "tessel",
     "raspberrypi",
     "skynet",
+    "octoblu",
     "meshblu"
   ],
   "dependencies": {
-    "mqtt": "^1.0.5"
+    "debug": "^2.2.0",
+    "eventemitter2": "^0.4.14",
+    "lodash": "^3.10.0",
+    "mqtt": "^1.3.5"
   },
   "engines": {
     "node": ">= 0.8.0"
@@ -26,5 +30,12 @@
       "type": "MIT",
       "url": "http://github.com/octoblu/npm/raw/master/LICENSE"
     }
-  ]
+  ],
+  "devDependencies": {
+    "chai": "^3.2.0",
+    "coffee-script": "^1.9.3",
+    "mocha": "^2.2.5",
+    "sinon": "^1.15.4",
+    "sinon-chai": "^2.8.0"
+  }
 }
