@@ -28,32 +28,51 @@ var meshblu = new Meshblu(config);
 console.log('starting...');
 
 meshblu.connect(function(response){
-  console.log('ready', response);
   // Update Device - response emits event 'config'
   meshblu.update({uuid: config.uuid, skynet: 'rules'});
 
-  // Send Data - response emits event 'data'
-  meshblu.data({sensorData: 1500});
-
   // Message - response emits event 'message'
-  var message = {
-    devices: ['5682bd69-0199-46eb-b79b-0f585e5994e5'],
+  meshblu.message({
+    devices: [config.uuid],
     topic: 'hello',
     payload: {ilove: 'food'}
-  };
-  meshblu.message(message);
+  });
 
-  // Reset token - response emits event 'token'
-  meshblu.resetToken({uuid: 'some-uuid'});
+  // On message
+  meshblu.on('message', function(message){
+    console.log('recieved message', message);
+  });
 
-  // Generate New Session Token - response emits event 'generateAndStoreToken'
-  meshblu.generateAndStoreToken({uuid: 'some-uuid'});
+  // On config
+  meshblu.on('config', function(config){
+    console.log('recieved config', config);
+  });
 
-  // Get Public Key - response emits event 'getPublicKey'
-  meshblu.getPublicKey({uuid: 'some-uuid'});
+  // On data
+  meshblu.on('data', function(data){
+    console.log('recieved data', data);
+  });
 
-  // Whoami - - response emits event 'whoami'
-  meshblu.whoami();
+  // Generate Session Token
+  meshblu.generateAndStoreToken({uuid: config.uuid}, function(error, response){
+    console.log('generated token', response);
+  });
+
+  // Reset Token
+  //meshblu.resetToken({uuid: config.uuid}, function(error, response){
+  //  console.log('reset token', response);
+  //});
+
+  // Generate new public key
+  meshblu.getPublicKey({uuid: config.uuid}, function(error, response){
+    console.log('retrieved publicKey', response.publicKey);
+  });
+
+  // Whoami
+  meshblu.whoami(function(error, device){
+    console.log('whoami', device);
+  });
+
 });
 ```
 
