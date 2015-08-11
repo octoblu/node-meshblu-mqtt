@@ -23,12 +23,10 @@ class Meshblu extends EventEmitter2
 
   connect: (callback=->) =>
     uri = @_buildUri()
-    options = _.omit @options, ['port', 'host', 'hostname', 'protocol']
-    debug 'connecting...', uri
-    @client = @mqtt.connect uri, options
+
+    @client = @mqtt.connect uri, @options
     @client.once 'connect', =>
       response = _.pick @options, 'uuid', 'token'
-      debug 'connected to mqtt meshblu', response
       @client.subscribe @options.uuid, qos: @options.qos
       callback response
 
@@ -77,12 +75,11 @@ class Meshblu extends EventEmitter2
 
   # Private Functions
   _buildUri: =>
-    options = _.pick _.clone(@options), ['protocol', 'hostname', 'port']
     defaults =
       protocol: 'mqtt'
       hostname: 'meshblu.octoblu.com'
       port: 1883
-    uriOptions = _.defaults options, defaults
+    uriOptions = _.defaults {}, @options, defaults
     url.format uriOptions
 
   _messageHandler: (uuid, message) =>
