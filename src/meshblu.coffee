@@ -96,7 +96,6 @@ class Meshblu extends EventEmitter2
   handleCallbackResponse: (message) =>
     id = message._request?.callbackId
     return false unless id?
-    console.log 'callback', message.topic, id
     callback = @messageCallbacks[id] ? ->
     callback message.data if message.topic == 'error'
     callback null, message.data if message.topic != 'error'
