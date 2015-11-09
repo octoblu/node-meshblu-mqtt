@@ -16,6 +16,8 @@ Example:
 var Meshblu = require('meshblu-mqtt');
 var config  = require('./meshblu.json');
 
+// if using meshblu-util - change your meshblu.json port to 1883
+
 // Config Example
 // {
 //   "uuid": "5632dd4a-e66b-43c7-bbbd-b264903e20bd",
@@ -31,10 +33,10 @@ meshblu.connect(function(response){
   // Update Device - response emits event 'config'
   meshblu.update({uuid: config.uuid, skynet: 'rules'});
 
-  // Message - response emits event 'message'
+  // Message - response emits event 'message' to all devices listening
   meshblu.message({
-    devices: [config.uuid],
-    topic: 'hello',
+    devices: ["*"],
+    topic: 'message',
     payload: {ilove: 'food'}
   });
 
