@@ -1,6 +1,6 @@
 _               = require 'lodash'
 url             = require 'url'
-nodeUuid        = require 'node-uuid'
+uuid            = require 'uuid'
 {EventEmitter2} = require 'eventemitter2'
 debug           = require('debug')('meshblu-mqtt')
 
@@ -9,15 +9,18 @@ PROXY_EVENTS = ['close', 'error', 'reconnect', 'offline', 'pong', 'open', 'confi
 class Meshblu extends EventEmitter2
   constructor: (options={}, dependencies={})->
     super wildcard: true
+    @queueName = "#{options.uuid}.#{uuid.v4()}"
+    @firehoseQueueName = "#{options.uuid}.firehose.#{uuid.v4()}"
     @mqtt = dependencies.mqtt ? require 'mqtt'
     defaults =
       keepalive: 10
       protocolId: 'MQIsdp'
-      protocolVersion: 4
+      protocolVersion: 3
       qos: 0
       username: options.uuid
       password: options.token
       reconnectPeriod: 5000
+      clientId: @queueName
     @options = _.defaults options, defaults
     @messageCallbacks = {}
 
@@ -27,7 +30,7 @@ class Meshblu extends EventEmitter2
     @client = @mqtt.connect uri, @options
     @client.once 'connect', =>
       response = _.pick @options, 'uuid', 'token'
-      @client.subscribe @options.uuid, qos: @options.qos
+      @client.subscribe @firehoseQueueName, qos: @options.qos
       callback response
 
     @client.on 'message', @_messageHandler
@@ -38,15 +41,15 @@ class Meshblu extends EventEmitter2
     throw new Error 'No Active Connection' unless @client?
 
     if !data
-      dataString = {}
+      rawData = null
     else if _.isString data
-      dataString = data
+      rawData = data
     else
-      data.callbackId = nodeUuid.v1();
+      data.callbackId = uuid.v4();
       @messageCallbacks[data.callbackId] = fn;
-      dataString = JSON.stringify(data)
-    debug 'publish', topic, dataString
-    @client.publish topic, dataString
+      rawData = JSON.stringify(data)
+    debug 'publish', topic, rawData
+    @client.publish 'meshblu.request', JSON.stringify({topic, rawData})
 
   # API Functions
   message: (params) =>
