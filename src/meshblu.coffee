@@ -30,7 +30,7 @@ class Meshblu extends EventEmitter2
     @client = @mqtt.connect uri, @options
     @client.once 'connect', =>
       response = _.pick @options, 'uuid', 'token'
-      @client.subscribe @firehoseQueueName, qos: @options.qos
+      # @client.subscribe [@queueName, @firehoseQueueName], qos: @options.qos
       callback response
 
     @client.on 'message', @_messageHandler
@@ -39,17 +39,10 @@ class Meshblu extends EventEmitter2
 
   publish: (topic, data, fn=->) =>
     throw new Error 'No Active Connection' unless @client?
-
-    if !data
-      rawData = null
-    else if _.isString data
-      rawData = data
-    else
-      data.callbackId = uuid.v4();
-      @messageCallbacks[data.callbackId] = fn;
-      rawData = JSON.stringify(data)
-    debug 'publish', topic, rawData
-    @client.publish 'meshblu.request', JSON.stringify({topic, rawData})
+    message = {data, callbackId: uuid.v4(), replyTo: @queueName}
+    @messageCallbacks[message.callbackId] = fn;
+    debug 'publish', topic, message
+    @client.publish "meshblu.#{topic}", JSON.stringify(message)
 
   # API Functions
   message: (params) =>
@@ -86,18 +79,21 @@ class Meshblu extends EventEmitter2
     url.format uriOptions
 
   _messageHandler: (uuid, message) =>
+    debug arguments
     message = message.toString()
     try
       message = JSON.parse message
     catch error
       debug 'unable to parse message', message
 
+    return unless message?
+
     debug '_messageHandler', message.topic, message.data
     return if @handleCallbackResponse message
-    return @emit message.topic, message.data
+    return @emit message.topic, message.data if message?.topic?
 
   handleCallbackResponse: (message) =>
-    id = message._request?.callbackId
+    id = message.callbackId
     return false unless id?
     callback = @messageCallbacks[id] ? ->
     callback message.data if message.topic == 'error'
