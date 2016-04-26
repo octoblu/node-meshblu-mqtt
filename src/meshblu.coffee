@@ -9,16 +9,18 @@ PROXY_EVENTS = ['close', 'error', 'reconnect', 'offline', 'pong', 'open', 'confi
 class Meshblu extends EventEmitter2
   constructor: (options={}, dependencies={})->
     super wildcard: true
-    @queueName = "#{options.uuid}.#{uuid.v4()}"
-    @firehoseQueueName = "#{options.uuid}.firehose.#{uuid.v4()}"
+    {@uuid, @token} = options
+    @queueName = "#{@uuid}.#{uuid.v4()}"
+    @firehoseQueueName = "#{@uuid}.firehose"
+    debug {@queueName}
     @mqtt = dependencies.mqtt ? require 'mqtt'
     defaults =
       keepalive: 10
       protocolId: 'MQIsdp'
       protocolVersion: 3
       qos: 0
-      username: options.uuid
-      password: options.token
+      username: @uuid
+      password: @token
       reconnectPeriod: 5000
       clientId: @queueName
     @options = _.defaults options, defaults
@@ -30,44 +32,72 @@ class Meshblu extends EventEmitter2
     @client = @mqtt.connect uri, @options
     @client.once 'connect', =>
       response = _.pick @options, 'uuid', 'token'
-      # @client.subscribe [@queueName, @firehoseQueueName], qos: @options.qos
+      # @client.subscribe "#{@@uuid}.*"
+      subscriptions = [@queueName, @firehoseQueueName]
+      # debug subscriptions
+      @client.subscribe subscriptions, qos: @options.qos
+      @client.publish 'meshblu.firehose.request', JSON.stringify({@uuid})
+      @client.publish 'meshblu.cache-auth', JSON.stringify(auth: {@uuid, @token})
+      @client.publish 'meshblu.reply-to', JSON.stringify(replyTo: @queueName)
       callback response
 
     @client.on 'message', @_messageHandler
 
     _.each PROXY_EVENTS, (event) => @_proxy event
 
-  publish: (topic, data, fn=->) =>
-    throw new Error 'No Active Connection' unless @client?
-    message = {data, callbackId: uuid.v4(), replyTo: @queueName}
-    @messageCallbacks[message.callbackId] = fn;
-    debug 'publish', topic, message
-    @client.publish "meshblu.#{topic}", JSON.stringify(message)
-
-  # API Functions
-  message: (params) =>
-    @publish 'message', params
-
-  subscribe: (params) =>
+  subscribeTopic: (params) =>
     @client.subscribe params
 
-  unsubscribe: (params) =>
+  unsubscribeTopic: (params) =>
     @client.unsubscribe params
 
-  update: (data, fn=->) =>
-    @publish 'update', data, fn
+  # API Functions
 
-  resetToken: (data, fn=->) =>
-    @publish 'resetToken', data, fn
+  message: (data, callback) =>
+    @_makeJob 'SendMessage', null, data, callback
 
-  getPublicKey: (data, fn=->) =>
-    @publish 'getPublicKey', data, fn
+  createSessionToken: (uuid, data, callback) =>
+    @_makeJob 'CreateSessionToken', toUuid: uuid, data, callback
 
-  generateAndStoreToken: (data, fn=->) =>
-    @publish 'generateAndStoreToken', data, fn
+  register: (data, callback) =>
+    @_makeJob 'RegisterDevice', null, data, callback
 
-  whoami: (fn=->) =>
-    @publish 'whoami', {}, fn
+  unregister: (uuid, callback) =>
+    @_makeJob 'UnregisterDevice', toUuid: uuid, null, callback
+
+  searchDevices: (uuid, data={}, callback) =>
+    @_makeJob 'SearchDevices', fromUuid: uuid, data, callback
+
+  status: (callback) =>
+    @_makeJob 'GetStatus', null, null, callback
+
+  subscribe: (uuid, data, callback) =>
+    @_makeJob 'CreateSubscription', toUuid: uuid, data, callback
+
+  unsubscribe: (uuid, data, callback) =>
+    @_makeJob 'DeleteSubscription', toUuid: uuid, data, callback
+
+  update: (uuid, data, callback) =>
+    @_makeJob 'UpdateDevice', toUuid: uuid, data, callback
+
+  whoami: (callback) =>
+    @_makeJob 'GetDevice', toUuid: @uuid, null, callback
+
+  _makeJob: (jobType, metadata, data, callback) =>
+    metadata = _.clone metadata || {}
+    #metadata.auth = {@uuid, @token}
+    metadata.jobType = jobType
+    jobInfo =
+      callbackId: uuid.v4()
+      #replyTo: @queueName
+    @messageCallbacks[jobInfo.callbackId] = callback;
+
+    if data?
+      rawData = JSON.stringify data
+    message = {job: {metadata, rawData}, jobInfo}
+
+    throw new Error 'No Active Connection' unless @client?
+    @client.publish 'meshblu.request', JSON.stringify(message)
 
   # Private Functions
   _buildUri: =>
@@ -88,16 +118,22 @@ class Meshblu extends EventEmitter2
 
     return unless message?
 
-    debug '_messageHandler', message.topic, message.data
-    return if @handleCallbackResponse message
-    return @emit message.topic, message.data if message?.topic?
+    debug '_messageHandler', message
 
-  handleCallbackResponse: (message) =>
+    return if @_handleCallbackResponse message
+    return @emit message.topic, message.data if message.topic?
+
+  _handleCallbackResponse: (message) =>
     id = message.callbackId
     return false unless id?
     callback = @messageCallbacks[id] ? ->
-    callback message.data if message.topic == 'error'
-    callback null, message.data if message.topic != 'error'
+    try
+      response = JSON.parse message.data
+    catch error
+      response = null
+
+    callback new Error(message.data) if message.topic == 'error'
+    callback null, response if message.topic != 'error'
     delete @messageCallbacks[id]
     return true
 
