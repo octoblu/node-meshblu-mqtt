@@ -33,12 +33,12 @@ class Meshblu extends EventEmitter2
     @client.once 'connect', =>
       response = _.pick @options, 'uuid', 'token'
       # @client.subscribe "#{@@uuid}.*"
-      subscriptions = [@queueName, @firehoseQueueName]
+      subscriptions = [@queueName] #, @firehoseQueueName]
       # debug subscriptions
       @client.subscribe subscriptions, qos: @options.qos
-      @client.publish 'meshblu.firehose.request', JSON.stringify({@uuid})
-      @client.publish 'meshblu.cache-auth', JSON.stringify(auth: {@uuid, @token})
-      @client.publish 'meshblu.reply-to', JSON.stringify(replyTo: @queueName)
+      # @client.publish 'meshblu.firehose.request', JSON.stringify({@uuid})
+      # @client.publish 'meshblu.cache-auth', JSON.stringify(auth: {@uuid, @token})
+      # @client.publish 'meshblu.reply-to', JSON.stringify(replyTo: @queueName)
       callback response
 
     @client.on 'message', @_messageHandler
@@ -87,14 +87,13 @@ class Meshblu extends EventEmitter2
     metadata = _.clone metadata || {}
     #metadata.auth = {@uuid, @token}
     metadata.jobType = jobType
-    jobInfo =
-      callbackId: uuid.v4()
+    callbackInfo = id: uuid.v4()
       #replyTo: @queueName
-    @messageCallbacks[jobInfo.callbackId] = callback;
+    @messageCallbacks[callbackInfo.id] = callback;
 
     if data?
       rawData = JSON.stringify data
-    message = {job: {metadata, rawData}, jobInfo}
+    message = {job: {metadata, rawData}, callbackInfo}
 
     throw new Error 'No Active Connection' unless @client?
     @client.publish 'meshblu.request', JSON.stringify(message)
@@ -109,7 +108,7 @@ class Meshblu extends EventEmitter2
     url.format uriOptions
 
   _messageHandler: (uuid, message) =>
-    debug arguments
+    debug '_messageHandler!'
     message = message.toString()
     try
       message = JSON.parse message
@@ -118,13 +117,15 @@ class Meshblu extends EventEmitter2
 
     return unless message?
 
-    debug '_messageHandler', message
+    # debug '_messageHandler', message
 
     return if @_handleCallbackResponse message
+    debug 'doing an emit topic!'
     return @emit message.topic, message.data if message.topic?
 
   _handleCallbackResponse: (message) =>
-    id = message.callbackId
+    # console.log {message}
+    id = message?.callbackInfo?.id
     return false unless id?
     callback = @messageCallbacks[id] ? ->
     try
