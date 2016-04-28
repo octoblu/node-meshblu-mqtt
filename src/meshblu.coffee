@@ -9,8 +9,9 @@ PROXY_EVENTS = ['close', 'error', 'reconnect', 'offline', 'pong', 'open', 'confi
 class Meshblu extends EventEmitter2
   constructor: (options={}, dependencies={})->
     super wildcard: true
+    options = _.cloneDeep options
     {@uuid, @token} = options
-    @queueName = "#{@uuid}.#{uuid.v4()}"
+    @queueName = "#{@uuid or 'guest'}.#{uuid.v4()}"
     @firehoseQueueName = "#{@uuid}.firehose"
     debug {@queueName}
     @mqtt = dependencies.mqtt ? require 'mqtt'
@@ -25,6 +26,7 @@ class Meshblu extends EventEmitter2
       clientId: @queueName
     @options = _.defaults options, defaults
     @messageCallbacks = {}
+    debug {@options}
 
   connect: (callback=->) =>
     uri = @_buildUri()
