@@ -9,10 +9,10 @@ PROXY_EVENTS = ['close', 'error', 'reconnect', 'offline', 'pong', 'open']
 class Meshblu extends EventEmitter2
   constructor: (options={}, dependencies={})->
     super wildcard: true
+    clientId = uuid.v4()
     options = _.cloneDeep options
     {@uuid, @token} = options
-    @clientId = uuid.v4()
-    @replyTopic = "#{@uuid or 'guest'}/#{@clientId}"
+    @replyTopic = "#{@uuid or 'guest'}/#{clientId}"
     @mqtt = dependencies.mqtt ? require 'mqtt'
     defaults =
       keepalive: 10
@@ -22,7 +22,7 @@ class Meshblu extends EventEmitter2
       username: @uuid
       password: @token
       reconnectPeriod: 5000
-      clientId: @clientId
+      clientId: clientId
     @options = _.defaults options, defaults
     @messageCallbacks = {}
     debug {@options}
@@ -34,9 +34,7 @@ class Meshblu extends EventEmitter2
     @client.once 'connect', =>
       response = _.pick @options, 'uuid', 'token'
       topics = [@replyTopic]
-      debug topics
       @mqttSubscribe topics, qos: @options.qos
-      @mqttPublish 'meshblu.firehose.request', {@replyTopic} if @uuid?
       callback response
 
     @client.on 'message', @_messageHandler
@@ -80,11 +78,21 @@ class Meshblu extends EventEmitter2
   whoami: (callback) =>
     @_makeJob 'GetDevice', toUuid: @uuid, null, callback
 
+  requestFirehose: (auth, callback) =>
+    callbackId = @_registerCallback callback
+    auth ?= {@uuid, @token}
+    @mqttPublish 'meshblu.firehose.request', {auth, @replyTopic, callbackId} if @uuid?
+
+  # Private Functions
+  _registerCallback: (callback) =>
+    callbackId = uuid.v4()
+    @messageCallbacks[callbackId] = callback;
+    return callbackId
+
   _makeJob: (jobType, metadata, data, callback) =>
     metadata = _.clone metadata || {}
     metadata.jobType = jobType
-    callbackId = uuid.v4()
-    @messageCallbacks[callbackId] = callback;
+    callbackId = @_registerCallback callback
 
     if data?
       rawData = JSON.stringify data
@@ -93,7 +101,6 @@ class Meshblu extends EventEmitter2
     throw new Error 'No Active Connection' unless @client?
     @mqttPublish 'meshblu.request', request
 
-  # Private Functions
   _buildUri: =>
     defaults =
       protocol: 'mqtt'
