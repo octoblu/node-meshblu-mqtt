@@ -11,8 +11,8 @@ class Meshblu extends EventEmitter2
     super wildcard: true
     options = _.cloneDeep options
     {@uuid, @token} = options
-    @queueName = "#{@uuid or 'guest'}.#{uuid.v4()}"
-    @firehoseQueueName = "#{@uuid}.firehose"
+    # @queueName = "#{@uuid or 'guest'}.#{uuid.v4()}"
+    # @firehoseQueueName = "#{@uuid}.firehose"
     debug {@queueName}
     @mqtt = dependencies.mqtt ? require 'mqtt'
     defaults =
@@ -23,7 +23,7 @@ class Meshblu extends EventEmitter2
       username: @uuid
       password: @token
       reconnectPeriod: 5000
-      clientId: @queueName
+      # clientId: @queueName
     @options = _.defaults options, defaults
     @messageCallbacks = {}
     debug {@options}
@@ -35,9 +35,9 @@ class Meshblu extends EventEmitter2
     @client.once 'connect', =>
       response = _.pick @options, 'uuid', 'token'
       # @client.subscribe "#{@@uuid}.*"
-      subscriptions = [@queueName] #, @firehoseQueueName]
+      # subscriptions = [@queueName] #, @firehoseQueueName]
       # debug subscriptions
-      @client.subscribe subscriptions, qos: @options.qos
+      # @client.subscribe subscriptions, qos: @options.qos
       # @client.publish 'meshblu.firehose.request', JSON.stringify({@uuid})
       # @client.publish 'meshblu.cache-auth', JSON.stringify(auth: {@uuid, @token})
       # @client.publish 'meshblu.reply-to', JSON.stringify(replyTo: @queueName)
@@ -47,11 +47,11 @@ class Meshblu extends EventEmitter2
 
     _.each PROXY_EVENTS, (event) => @_proxy event
 
-  subscribeTopic: (params) =>
-    @client.subscribe params
-
-  unsubscribeTopic: (params) =>
-    @client.unsubscribe params
+  # subscribeTopic: (params) =>
+  #   @client.subscribe params
+  #
+  # unsubscribeTopic: (params) =>
+  #   @client.unsubscribe params
 
   # API Functions
 
@@ -89,13 +89,13 @@ class Meshblu extends EventEmitter2
     metadata = _.clone metadata || {}
     #metadata.auth = {@uuid, @token}
     metadata.jobType = jobType
-    callbackInfo = id: uuid.v4()
+    callbackId = uuid.v4()
       #replyTo: @queueName
-    @messageCallbacks[callbackInfo.id] = callback;
+    @messageCallbacks[callbackId] = callback;
 
     if data?
       rawData = JSON.stringify data
-    message = {job: {metadata, rawData}, callbackInfo}
+    message = {job: {metadata, rawData}, callbackId}
 
     throw new Error 'No Active Connection' unless @client?
     @client.publish 'meshblu.request', JSON.stringify(message)
@@ -127,7 +127,7 @@ class Meshblu extends EventEmitter2
 
   _handleCallbackResponse: (message) =>
     # console.log {message}
-    id = message?.callbackInfo?.id
+    id = message?.callbackId
     return false unless id?
     callback = @messageCallbacks[id] ? ->
     try
