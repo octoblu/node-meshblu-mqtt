@@ -4,16 +4,15 @@ uuid            = require 'uuid'
 {EventEmitter2} = require 'eventemitter2'
 debug           = require('debug')('meshblu-mqtt')
 
-PROXY_EVENTS = ['close', 'error', 'reconnect', 'offline', 'pong', 'open', 'config', 'data']
+PROXY_EVENTS = ['close', 'error', 'reconnect', 'offline', 'pong', 'open']
 
 class Meshblu extends EventEmitter2
   constructor: (options={}, dependencies={})->
     super wildcard: true
     options = _.cloneDeep options
     {@uuid, @token} = options
-    # @queueName = "#{@uuid or 'guest'}.#{uuid.v4()}"
-    # @firehoseQueueName = "#{@uuid}.firehose"
-    debug {@queueName}
+    @clientId = uuid.v4()
+    @replyTopic = "#{@uuid or 'guest'}/#{@clientId}"
     @mqtt = dependencies.mqtt ? require 'mqtt'
     defaults =
       keepalive: 10
@@ -23,7 +22,7 @@ class Meshblu extends EventEmitter2
       username: @uuid
       password: @token
       reconnectPeriod: 5000
-      # clientId: @queueName
+      clientId: @clientId
     @options = _.defaults options, defaults
     @messageCallbacks = {}
     debug {@options}
@@ -34,27 +33,23 @@ class Meshblu extends EventEmitter2
     @client = @mqtt.connect uri, @options
     @client.once 'connect', =>
       response = _.pick @options, 'uuid', 'token'
-      # @client.subscribe "#{@@uuid}.*"
-      # subscriptions = [@queueName] #, @firehoseQueueName]
-      # debug subscriptions
-      # @client.subscribe subscriptions, qos: @options.qos
-      # @client.publish 'meshblu.firehose.request', JSON.stringify({@uuid})
-      # @client.publish 'meshblu.cache-auth', JSON.stringify(auth: {@uuid, @token})
-      # @client.publish 'meshblu.reply-to', JSON.stringify(replyTo: @queueName)
+      topics = [@replyTopic]
+      debug topics
+      @mqttSubscribe topics, qos: @options.qos
+      @mqttPublish 'meshblu.firehose.request', {@replyTopic} if @uuid?
       callback response
 
     @client.on 'message', @_messageHandler
 
     _.each PROXY_EVENTS, (event) => @_proxy event
 
-  # subscribeTopic: (params) =>
-  #   @client.subscribe params
-  #
-  # unsubscribeTopic: (params) =>
-  #   @client.unsubscribe params
+  mqttPublish: (topic, data) =>
+    @client.publish topic, JSON.stringify(data)
+
+  mqttSubscribe: (topics, options) =>
+    @client.subscribe topics, options
 
   # API Functions
-
   message: (data, callback) =>
     @_makeJob 'SendMessage', null, data, callback
 
@@ -87,18 +82,16 @@ class Meshblu extends EventEmitter2
 
   _makeJob: (jobType, metadata, data, callback) =>
     metadata = _.clone metadata || {}
-    #metadata.auth = {@uuid, @token}
     metadata.jobType = jobType
     callbackId = uuid.v4()
-      #replyTo: @queueName
     @messageCallbacks[callbackId] = callback;
 
     if data?
       rawData = JSON.stringify data
-    message = {job: {metadata, rawData}, callbackId}
+    request = {job: {metadata, rawData}, callbackId, @replyTopic}
 
     throw new Error 'No Active Connection' unless @client?
-    @client.publish 'meshblu.request', JSON.stringify(message)
+    @mqttPublish 'meshblu.request', request
 
   # Private Functions
   _buildUri: =>
@@ -109,24 +102,19 @@ class Meshblu extends EventEmitter2
     uriOptions = _.defaults {}, @options, defaults
     url.format uriOptions
 
-  _messageHandler: (uuid, message) =>
-    debug '_messageHandler!'
+  _messageHandler: (topic, message) =>
     message = message.toString()
     try
       message = JSON.parse message
     catch error
       debug 'unable to parse message', message
 
-    return unless message?
-
-    # debug '_messageHandler', message
-
+    debug '_messageHandler:', topic, message
+    return unless _.isObject message
     return if @_handleCallbackResponse message
-    debug 'doing an emit topic!'
-    return @emit message.topic, message.data if message.topic?
+    return @emit message.type, message.data if message.type?
 
   _handleCallbackResponse: (message) =>
-    # console.log {message}
     id = message?.callbackId
     return false unless id?
     callback = @messageCallbacks[id] ? ->
@@ -135,8 +123,8 @@ class Meshblu extends EventEmitter2
     catch error
       response = null
 
-    callback new Error(message.data) if message.topic == 'error'
-    callback null, response if message.topic != 'error'
+    callback new Error(message.data) if message.type == 'meshblu.error'
+    callback null, response if message.type != 'meshblu.error'
     delete @messageCallbacks[id]
     return true
 
@@ -144,9 +132,5 @@ class Meshblu extends EventEmitter2
     @client.on event, =>
       debug 'proxy ' + event, _.first arguments
       @emit event, arguments...
-
-  _uuidOrObject: (data) =>
-    return uuid: data if _.isString data
-    return data
 
 module.exports = Meshblu
