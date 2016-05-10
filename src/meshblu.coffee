@@ -23,13 +23,17 @@ class Meshblu extends EventEmitter2
       password: @token
       reconnectPeriod: 5000
       clientId: clientId
+      hostname: "meshblu.octoblu.com"
+      port: '8883'
+
     @options = _.defaults options, defaults
     @messageCallbacks = {}
     debug {@options}
 
   connect: (callback=->) =>
-    uri = @_buildUri()
-
+    {protocol, hostname, port} = @options
+    uri = @_buildUri(protocol, hostname, port)
+    debug 'connecting to uri', uri
     @client = @mqtt.connect uri, @options
     @client.once 'connect', =>
       response = _.pick @options, 'uuid', 'token'
@@ -101,13 +105,12 @@ class Meshblu extends EventEmitter2
     throw new Error 'No Active Connection' unless @client?
     @mqttPublish 'meshblu.request', request
 
-  _buildUri: =>
-    defaults =
-      protocol: 'mqtt'
-      hostname: 'meshblu.octoblu.com'
-      port: 1883
-    uriOptions = _.defaults {}, @options, defaults
-    url.format uriOptions
+  _buildUri: ( protocol, hostname, port ) =>
+    protocol ?= 'wss'   if port-0 == 3001
+    protocol ?= 'ws'    if port-0 == 3000
+    protocol ?= 'mqtts' if port-0 == 8883
+    protocol ?= 'mqtt'
+    url.format { protocol, hostname, port }
 
   _messageHandler: (topic, message) =>
     message = message.toString()
