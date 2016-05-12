@@ -12,12 +12,11 @@ class Meshblu extends EventEmitter2
     clientId = uuid.v4()
     options = _.cloneDeep options
     {@uuid, @token} = options
-    @replyTopic = "#{@uuid or 'guest'}/#{clientId}"
     @mqtt = dependencies.mqtt ? require 'mqtt'
     defaults =
       keepalive: 10
-      protocolId: 'MQIsdp'
-      protocolVersion: 3
+      protocolId: 'MQTT'
+      protocolVersion: 4
       qos: 0
       username: @uuid
       password: @token
@@ -25,8 +24,11 @@ class Meshblu extends EventEmitter2
       clientId: clientId
       hostname: "meshblu.octoblu.com"
       port: '8883'
+      bridged: false
 
     @options = _.defaults options, defaults
+    @replyTopic = "meshbluClient/#{@options.username or 'guest'}/#{clientId}"
+
     @messageCallbacks = {}
     debug {@options}
 
@@ -37,8 +39,9 @@ class Meshblu extends EventEmitter2
     @client = @mqtt.connect uri, @options
     @client.once 'connect', =>
       response = _.pick @options, 'uuid', 'token'
-      topics = [@replyTopic]
-      @mqttSubscribe topics, qos: @options.qos
+      if @options.bridged
+        topics = [@replyTopic]
+        @mqttSubscribe topics, qos: @options.qos
       callback response
 
     @client.on 'message', @_messageHandler
@@ -82,10 +85,20 @@ class Meshblu extends EventEmitter2
   whoami: (callback) =>
     @_makeJob 'GetDevice', toUuid: @uuid, null, callback
 
-  requestFirehose: (auth, callback) =>
+  _messageFirehose: (auth, connect, callback) =>
     callbackId = @_registerCallback callback
     auth ?= {@uuid, @token}
-    @mqttPublish 'meshblu.firehose.request', {auth, @replyTopic, callbackId} if @uuid?
+    return unless auth?.uuid?
+    request = {callbackId, connect}
+    request.replyTopic = @replyTopic if @options.bridged
+    request.auth = auth if @options.bridged or auth.uuid != @uuid or auth.token != @token
+    @mqttPublish 'meshblu/firehose', request
+
+  connectFirehose: (auth, callback) =>
+    @_messageFirehose auth, true, callback
+
+  disconnectFirehose: (auth, callback) =>
+    @_messageFirehose auth, false, callback
 
   # Private Functions
   _registerCallback: (callback) =>
@@ -100,10 +113,13 @@ class Meshblu extends EventEmitter2
 
     if data?
       rawData = JSON.stringify data
-    request = {job: {metadata, rawData}, callbackId, @replyTopic}
+    request = {job: {metadata, rawData}, callbackId}
+    if @options.bridged
+      request.replyTopic = @replyTopic
+      metadata.auth = {@uuid, @token}
 
     throw new Error 'No Active Connection' unless @client?
-    @mqttPublish 'meshblu.request', request
+    @mqttPublish 'meshblu/request', request
 
   _buildUri: ( protocol, hostname, port ) =>
     protocol ?= 'wss'   if port-0 == 3001
@@ -133,8 +149,8 @@ class Meshblu extends EventEmitter2
     catch error
       response = null
 
-    callback new Error(message.data) if message.type == 'meshblu.error'
-    callback null, response if message.type != 'meshblu.error'
+    callback new Error(message.data) if message.type == 'meshblu/error'
+    callback null, response if message.type != 'meshblu/error'
     delete @messageCallbacks[id]
     return true
 
