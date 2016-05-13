@@ -14,7 +14,7 @@ class Meshblu extends EventEmitter2
     {@uuid, @token} = options
     @mqtt = dependencies.mqtt ? require 'mqtt'
     defaults =
-      keepalive: 10
+      keepalive: 120
       protocolId: 'MQTT'
       protocolVersion: 4
       qos: 0
@@ -102,6 +102,7 @@ class Meshblu extends EventEmitter2
 
   # Private Functions
   _registerCallback: (callback) =>
+    return unless callback?
     callbackId = uuid.v4()
     @messageCallbacks[callbackId] = callback;
     return callbackId
@@ -142,15 +143,19 @@ class Meshblu extends EventEmitter2
 
   _handleCallbackResponse: (message) =>
     id = message?.callbackId
-    return false unless id?
-    callback = @messageCallbacks[id] ? ->
+    callback = @messageCallbacks[id]
+    return false unless id? and callback?
+
     try
       response = JSON.parse message.data
     catch error
       response = null
 
-    callback new Error(message.data) if message.type == 'meshblu/error'
-    callback null, response if message.type != 'meshblu/error'
+    if message.type == 'meshblu/error'
+      callback new Error(message.data)
+    else
+      callback null, response
+
     delete @messageCallbacks[id]
     return true
 
