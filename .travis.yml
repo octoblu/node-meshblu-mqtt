@@ -1,0 +1,19 @@
+language: node_js
+node_js:
+- '5'
+branches:
+  only:
+  - "/^v[0-9]/"
+after_success:
+- npm run coverage
+- npm run mocha:json
+- bash <(curl -s https://codecov.io/bash)
+- bash <(curl -s https://codecov.octoblu.com/bash)
+deploy:
+  provider: npm
+  email: serveradmin@octoblu.com
+  api_key:
+    secure: pHOrNWtUPYEWdSU218CQYZpM9DNfNS/6zRixCJ8DkTdDsqWDFpe8f/VJ9vavtI7F9dRwRHnB7ApO1S89KfQwWM4Ldav/b1QesKUBq+EcE8dhI7Rs5z+yEUMqnF1G3O0T0+M9RV+cVyDPaO9RbFMAJxfPjT3oeDRG89bBwUBgGVs=
+  on:
+    tags: true
+    branches: true
