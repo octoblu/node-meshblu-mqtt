@@ -1,7 +1,7 @@
 {
   "name": "meshblu-mqtt",
   "description": "Meshblu MQTT client API",
-  "version": "4.0.1",
+  "version": "4.0.2",
   "homepage": "http://developer.octoblu.com",
   "repository": "git@github.com:octoblu/mqtt-client.git",
   "author": "Octoblu, Inc. <npm@octoblu.com>",
