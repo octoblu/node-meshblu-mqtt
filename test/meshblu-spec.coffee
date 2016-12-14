@@ -6,6 +6,7 @@ describe 'Meshblu', ->
     @mqtt = {}
     @mqtt.connect = sinon.stub().returns @mqtt
     @mqtt.on = sinon.stub()
+    @mqtt.once = sinon.stub()
     @mqtt.publish = sinon.stub()
     @mqtt.subscribe = sinon.stub()
 
@@ -24,13 +25,14 @@ describe 'Meshblu', ->
 
       it 'should have been called with a formated url', ->
         expect(@mqtt.connect).to.have.been.calledWith 'mqtt:localhost:1234',
+          hostname: "localhost"
           keepalive: 10
-          protocolId: 'MQIsdp'
+          password: "some-token"
+          port: 1234
+          protocolId: "MQIsdp"
           protocolVersion: 4
           qos: 0
-          clientId: 'some-uuid'
-          username: 'some-uuid'
-          password: 'some-token'
-          token:    'some-token'
-          uuid:     'some-uuid'
           reconnectPeriod: 5000
+          token: "some-token"
+          username: "some-uuid"
+          uuid: "some-uuid"

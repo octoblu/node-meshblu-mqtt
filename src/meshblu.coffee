@@ -22,13 +22,16 @@ class Meshblu extends EventEmitter2
     @messageCallbacks = {}
 
   connect: (callback=->) =>
+    callback = _.once callback
     uri = @_buildUri()
 
     @client = @mqtt.connect uri, @options
     @client.once 'connect', =>
       response = _.pick @options, 'uuid', 'token'
       @client.subscribe @options.uuid, qos: @options.qos
-      callback response
+      callback null, response
+
+    @client.once 'error', callback
 
     @client.on 'message', @_messageHandler
 
@@ -47,6 +50,10 @@ class Meshblu extends EventEmitter2
       dataString = JSON.stringify(data)
     debug 'publish', topic, dataString
     @client.publish topic, dataString
+
+  close: (callback) =>
+    @client.once 'close', callback
+    @client.end()
 
   # API Functions
   message: (params) =>
